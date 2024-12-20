@@ -36,7 +36,7 @@ flights_schema = StructType([
 ])
 
 
-# Define Silver-level flights schema
+# Define Silver-level flights schema?
 
 # Define airports schema
 
