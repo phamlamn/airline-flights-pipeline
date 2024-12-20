@@ -38,6 +38,7 @@ flights_schema = StructType([
 
 # Define Silver-level flights schema
 
+
 # Define airlines schema (do we just denormalize this?)
 airlines_schema = StructType(
     StructField('IATA_CODE', StringType(), False),
