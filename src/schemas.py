@@ -1,4 +1,5 @@
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+from pyspark.sql.types import StructType, StructField, IntegerType, FloatType, StringType
+
 
 # Define source flights schema
 flights_schema = StructType([
@@ -35,11 +36,29 @@ flights_schema = StructType([
     StructField("weather_delay", IntegerType(), True)
 ])
 
+# Define Silver-level flights schema
 
-# Define Silver-level flights schema?
-
-# Define airports schema
-
-# Define cancellation_codes schema (do we just denormalize this?)
 
 # Define airlines schema (do we just denormalize this?)
+airlines_schema = StructType(
+    StructField('IATA_CODE', StringType(), False),
+    StructField('AIRLINE', StringType(), False)
+)
+
+# Define airports schema
+airports_schema = StructType(
+    StructField('IATA_CODE', StringType(), False),
+    StructField('AIRPORT', StringType(), False),
+    StructField('CITY', StringType(), False),
+    StructField('STATE', StringType(), False),
+    StructField('COUNTRY', StringType(), False),
+    StructField('LATITUDE', FloatType(), False),
+    StructField('LONGITUDE', FloatType(), False)
+)
+
+# Define cancellation_codes schema (do we just denormalize this?)
+cancellation_codes_schema = StructType(
+    StructField('CANCELLATION_REASON', StringType(), False),
+    StructField('CANCELLATION_DESCRIPTION', StringType(), False)
+)
+
