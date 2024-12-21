@@ -3,6 +3,7 @@ import os
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
 
+# TODO update date columns
 flights_ddl = f"""
 CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.flights (
     year INT,

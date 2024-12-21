@@ -36,9 +36,6 @@ flights_schema = StructType([
     StructField("weather_delay", IntegerType(), True)
 ])
 
-# Define Silver-level flights schema
-
-
 # Define airlines schema (do we just denormalize this?)
 airlines_schema = StructType(
     StructField('IATA_CODE', StringType(), False),

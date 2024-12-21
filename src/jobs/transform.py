@@ -4,6 +4,9 @@
 
 ## Create Agg_fact_flights table
 
+
+
+
 # Implement WAP
 # Define spark WAP config
 # Write to unpublished table
