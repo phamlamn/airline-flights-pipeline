@@ -6,10 +6,7 @@ DATABASE_NAME = os.environ['DATABASE_NAME']
 # TODO update date columns
 flights_ddl = f"""
 CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.flights (
-    year INT,
-    month INT,
-    day INT,
-    day_of_week INT,
+    date DATE,
     airline STRING,
     flight_number INT,
     tail_number STRING,
@@ -36,10 +33,12 @@ CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.flights (
     security_delay INT,
     airline_delay INT,
     late_aircraft_delay INT,
-    weather_delay INT
+    weather_delay INT,
+    is_delayed INT
 )
 USING iceberg
-PARTITIONED BY (month)"""
+PARTITIONED BY (month(date))
+"""
 
 
 airlines_ddl = f"""
@@ -65,7 +64,7 @@ USING iceberg
 """
 
 
-cancellation_codes_ddl = f"""
+cancel_codes_ddl = f"""
 CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.cancellation_codes (
     CANCELLATION_REASON STRING,
     CANCELLATION_DESCRIPTION STRING

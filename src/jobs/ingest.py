@@ -2,7 +2,7 @@ import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit, expr, when, concat_ws, to_date, year, month, day, dayofweek, quarter
 
-import schemas
+import ingest_schemas
 import DDL
 
 
@@ -79,7 +79,7 @@ def generate_dim_date_df(spark: SparkSession) -> DataFrame:
     # Join holidays to date_df and add is_holiday column
     date_df = date_df \
         .join(
-            holidays_df,
+            broadcast(holidays_df),
             date_df.date == holidays_df.holiday_date,
             'left'
         ) \
@@ -93,6 +93,18 @@ def generate_dim_date_df(spark: SparkSession) -> DataFrame:
     # Rearrange date to be first column,
     date_df = date_df.select('date', *[col(c) for c in date_df.columns if c != 'date'])
     return date_df
+
+
+def generate_agg_fact_flights(spark: SparkSession):
+    # Read flights table
+    
+    # Read other tables?
+    
+    # Join flights with dims
+    
+    # Perform rollup
+    pass
+    
 
 
 def main():
@@ -120,28 +132,42 @@ def main():
     flights_filename = f'{data_path}/flights.csv'
     airlines_filename = f'{data_path}/airlines.csv'
     airports_filename = f'{data_path}/airports.csv'
-    cancellation_codes_filename = f'{data_path}/cancellation_codes.csv'
+    cancel_codes_filename = f'{data_path}/cancellation_codes.csv'
 
     # Read .csv files to DataFrame
-    flights_df = read_csv(spark, flights_filename, schemas.flights_schema)
-    airlines_df = read_csv(spark, airlines_filename, schemas.airlines_schema)
-    airports_df = read_csv(spark, airports_filename, schemas.airports_schema)
-    cancellation_codes_df = read_csv(spark, cancellation_codes_filename, schemas.cancellation_codes_schema)
-    
-    ## Create dim_date df
-    date_df = generate_dim_date_df(spark)
-    
-    # Add date column to flights_df and drop year, month, day, day_of_week columns
+    flights_df = read_csv(spark, flights_filename, ingest_schemas.flights_schema)
+    airlines_df = read_csv(spark, airlines_filename, ingest_schemas.airlines_schema)
+    airports_df = read_csv(spark, airports_filename, ingest_schemas.airports_schema)
+    cancel_codes_df = read_csv(spark, cancel_codes_filename, ingest_schemas.cancel_codes_schema)
+
+    # Add date column and remove other date-related columns
     flights_df = flights_df \
         .withColumn('date', to_date(concat_ws('-', 'year', 'month', 'day'))) \
         .drop('year', 'month', 'day', 'day_of_week')
-        
+
+    # Add is_delayed column (when scheduled_departure > 0)
+    flights_df = flights_df \
+        .withColumn(
+            'is_delayed',
+            when(col('departure_delay') > 0, lit(1)).otherwise(lit(0))
+        )
+
+    # Rearrange date to be first column,
+    flights_df = flights_df.select('date', *[col(c) for c in flights_df.columns if c != 'date'])
+
+    # Sort by date and schedule_departure time
+    flights_df = flights_df.sort(['date', 'scheduled_departure'])
+
+
+    ## Create dim_date df
+    date_df = generate_dim_date_df(spark)
+
 
     # Create Iceberg tables
     spark.sql(DDL.flights_ddl)
     spark.sql(DDL.airlines_ddl)
     spark.sql(DDL.airports_ddl)
-    spark.sql(DDL.cancellation_codes_ddl)
+    spark.sql(DDL.cancel_codes_ddl)
 
     # Write to Iceberg Tables
     # TODO Make idempotent, use upsert/merge?
@@ -156,7 +182,7 @@ def main():
     airports_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.airports') \
         .append()
 
-    cancellation_codes_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.cancellation_codes') \
+    cancel_codes_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.cancel_codes') \
         .append()
 
 

@@ -53,8 +53,8 @@ airports_schema = StructType(
     StructField('LONGITUDE', FloatType(), False)
 )
 
-# Define cancellation_codes schema (do we just denormalize this?)
-cancellation_codes_schema = StructType(
+# Define cancel_codes schema (do we just denormalize this?)
+cancel_codes_schema = StructType(
     StructField('CANCELLATION_REASON', StringType(), False),
     StructField('CANCELLATION_DESCRIPTION', StringType(), False)
 )
