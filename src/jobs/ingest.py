@@ -1,5 +1,5 @@
 import os
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, lit, expr, when, concat_ws, to_date, year, month, day, dayofweek, quarter
 
 import ingest_schemas
@@ -16,7 +16,7 @@ def read_csv(spark: SparkSession, filename: String, schema: StructType) -> DataF
                 .option('header', True) \
                 .csv(filename)
 
-
+# TODO
 def write_to_iceberg_table(
     spark: SparkSession,
     input_df: DataFrame,
@@ -94,8 +94,8 @@ def generate_dim_date_df(spark: SparkSession) -> DataFrame:
     date_df = date_df.select('date', *[col(c) for c in date_df.columns if c != 'date'])
     return date_df
 
-
-def generate_agg_fact_flights(spark: SparkSession):
+# TODO
+def do_agg_fact_flights_transformation(spark: SparkSession):
     # Read flights table
     
     # Read other tables?
@@ -104,7 +104,69 @@ def generate_agg_fact_flights(spark: SparkSession):
     
     # Perform rollup
     pass
+
+
+def do_raw_flights_transformation(spark: SparkSession, input_df: DataFrame) -> DataFrame:
+    # Add date column and remove other date-related columns
+    flights_df = input_df \
+        .withColumn('date', to_date(concat_ws('-', 'year', 'month', 'day'))) \
+        .drop('year', 'month', 'day', 'day_of_week')
+
+    # Add is_delayed column (when scheduled_departure > 0)
+    flights_df = flights_df \
+        .withColumn(
+            'is_delayed',
+            when(col('departure_delay') > 0, lit(1)).otherwise(lit(0))
+        )
+
+    # Rearrange date to be first column,
+    flights_df = flights_df.select('date', *[col(c) for c in flights_df.columns if c != 'date'])
+
+    # Sort by date and schedule_departure time
+    flights_df = flights_df.sort(['date', 'scheduled_departure'])
     
+    return flights_df
+
+
+def write_audit_publish(
+    spark,
+    input_df,
+    table_name,
+) -> Boolean:
+    
+    # Create audit branch, and set spark.wap.branch to ensure we write to audit branch
+    audit_branch_name = f'audit_{table_name}'
+    spark.sql(f'ALTER TABLE {CATALOG_NAME}.{DATABASE_NAME}.{table_name} CREATE BRANCH {audit_branch_name}')
+    spark.conf.set('spark.wap.branch', audit_branch_name)
+    
+    ## Write to audit branch
+    
+    # TODO Dedup data?
+    ## Write flights data to table
+    input_view_name = f'{table_name}_source'
+    input_df.createOrReplaceTempView(input_view_name)
+    
+    flights_merge_ddl = f"""
+    MERGE INTO airline.db.flights t
+    USING input_view_name s
+        ON  t.date = s.date
+        AND t.airline = s.airline
+        AND t.flight_number = s.flight_number
+        AND t.scheduled_departure = s.scheduled_departure
+    WHEN NOT MATCHED THEN INSERT *
+    """
+
+    spark.sql(flights_merge_ddl)
+    
+    
+    # Perform Data Quality checks
+    
+    # Verify Data Quality status
+    
+    # Publish if DQ passes, else log failure and break
+    
+    pass
+
 
 
 def main():
@@ -134,56 +196,40 @@ def main():
     airports_filename = f'{data_path}/airports.csv'
     cancel_codes_filename = f'{data_path}/cancellation_codes.csv'
 
-    # Read .csv files to DataFrame
+    # Extract raw .csv files to DataFrame
     flights_df = read_csv(spark, flights_filename, ingest_schemas.flights_schema)
     airlines_df = read_csv(spark, airlines_filename, ingest_schemas.airlines_schema)
     airports_df = read_csv(spark, airports_filename, ingest_schemas.airports_schema)
     cancel_codes_df = read_csv(spark, cancel_codes_filename, ingest_schemas.cancel_codes_schema)
 
-    # Add date column and remove other date-related columns
-    flights_df = flights_df \
-        .withColumn('date', to_date(concat_ws('-', 'year', 'month', 'day'))) \
-        .drop('year', 'month', 'day', 'day_of_week')
+    # Transform flights data (Create "date" column and add "is_delayed" column)
+    flights_df = do_raw_flights_transformation(spark, flights_df)
 
-    # Add is_delayed column (when scheduled_departure > 0)
-    flights_df = flights_df \
-        .withColumn(
-            'is_delayed',
-            when(col('departure_delay') > 0, lit(1)).otherwise(lit(0))
-        )
-
-    # Rearrange date to be first column,
-    flights_df = flights_df.select('date', *[col(c) for c in flights_df.columns if c != 'date'])
-
-    # Sort by date and schedule_departure time
-    flights_df = flights_df.sort(['date', 'scheduled_departure'])
-
-
-    ## Create dim_date df
+    # Create dim_date df
     date_df = generate_dim_date_df(spark)
 
 
-    # Create Iceberg tables
+    ## Load source data into Iceberg
+    # Create Iceberg tables if not exists
     spark.sql(DDL.flights_ddl)
     spark.sql(DDL.airlines_ddl)
     spark.sql(DDL.airports_ddl)
     spark.sql(DDL.cancel_codes_ddl)
 
-    # Write to Iceberg Tables
-    # TODO Make idempotent, use upsert/merge?
-    # TODO implement WAP for fact_flights table
-    # TODO Land into bronze, transform flight to datetime, create date dimension table (alternatively, just add new column datetime)
-    flights_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.flights') \
-        .append()
+    # Write-Audit-Publish flights to Iceberg
+    write_audit_publish()
 
-    airlines_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.airlines') \
-        .append()
+    # Perform aggregation fact table transformation
+    
+    # Write-Audit-Publish aggregated fact table to Iceberg
 
-    airports_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.airports') \
-        .append()
 
-    cancel_codes_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.cancel_codes') \
-        .append()
+
+    # # Write to Iceberg Tables
+    # flights_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.flights').append()
+    # airlines_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.airlines').append()
+    # airports_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.airports').append()
+    # cancel_codes_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.cancel_codes').append()
 
 
 if __name__ == "__main__":
