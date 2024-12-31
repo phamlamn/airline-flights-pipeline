@@ -4,7 +4,7 @@ from pyspark.sql.functions import col, lit, expr, when, concat_ws, to_date, year
 
 import ingest_schemas
 import DDL
-
+from data_quality_definitions import *
 
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
@@ -20,7 +20,7 @@ def read_csv(spark: SparkSession, filename: String, schema: StructType) -> DataF
 def write_to_iceberg_table(
     spark: SparkSession,
     input_df: DataFrame,
-    table_name: String
+    table_name: str
 ) -> None:
     deduped_df = input_df.dropDuplictes([])
     
@@ -129,9 +129,9 @@ def do_raw_flights_transformation(spark: SparkSession, input_df: DataFrame) -> D
 
 
 def write_audit_publish(
-    spark,
-    input_df,
-    table_name,
+    spark: SparkSession,
+    input_df: DataFrame,
+    table_name: str,
 ) -> Boolean:
     
     # Create audit branch, and set spark.wap.branch to ensure we write to audit branch
@@ -140,32 +140,42 @@ def write_audit_publish(
     spark.conf.set('spark.wap.branch', audit_branch_name)
     
     ## Write to audit branch
+    # TODO Dedup input data?
     
-    # TODO Dedup data?
-    ## Write flights data to table
+    # Create temp view to use during write
     input_view_name = f'{table_name}_source'
     input_df.createOrReplaceTempView(input_view_name)
     
+    # Write flights data to table
     flights_merge_ddl = f"""
     MERGE INTO airline.db.flights t
-    USING input_view_name s
+    USING {input_view_name} s
         ON  t.date = s.date
         AND t.airline = s.airline
         AND t.flight_number = s.flight_number
         AND t.scheduled_departure = s.scheduled_departure
     WHEN NOT MATCHED THEN INSERT *
     """
-
     spark.sql(flights_merge_ddl)
     
+    # Create df from newly staged table
+    staged_df = spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
     
     # Perform Data Quality checks
-    
-    # Verify Data Quality status
-    
+    result = run_data_quality_checks(spark, staged_df, table_name)
+
     # Publish if DQ passes, else log failure and break
+    # TODO fastforward or cherrypick?
+    if result.status == 'Success':
+        spark.sql(f'CALL airline.system.fast_forward("db.flights", "main", "{audit_branch_name}")')
+        # # Get snapshot id
+        # spark.sql('SELECT snapshot_id FROM airline.db.flights.refs WHERE name="audit_branch_flights"').show()
+        # spark.sql('CALL airline.system.cherrypick_snapshot("db.flights", 668148544964107792)')
+    else:
+        raise ValueError('Data Quality checks failed.')
+        # raise ValueError('Data Quality checks failed. Publishing aborted.')
     
-    pass
+    return
 
 
 
@@ -217,7 +227,7 @@ def main():
     spark.sql(DDL.cancel_codes_ddl)
 
     # Write-Audit-Publish flights to Iceberg
-    write_audit_publish()
+    write_audit_publish(spark, flights_df, 'fact_flights')
 
     # Perform aggregation fact table transformation
     
