@@ -1,6 +1,6 @@
 from pydeequ import *
 from pydeequ.checks import Check, CheckLevel
-from pydeeqy.verification import VerificationSuite
+from pydeequ.verification import VerificationSuite
 
 from pyspark.sql import SparkSession, DataFrame
 

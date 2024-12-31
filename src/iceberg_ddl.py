@@ -3,9 +3,9 @@ import os
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
 
-# TODO update date columns
+
 flights_ddl = f"""
-CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.flights (
+CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.fact_flights (
     date DATE,
     airline STRING,
     flight_number INT,
@@ -42,7 +42,7 @@ PARTITIONED BY (month(date))
 
 
 airlines_ddl = f"""
-CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.airlines (
+CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_airlines (
     IATA_CODE STRING,
     AIRLINE STRING
 )
@@ -51,7 +51,7 @@ USING iceberg
 
 
 airports_ddl = f"""
-CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.airports (
+CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_airports (
     IATA_CODE STRING,
     AIRPORT STRING,
     CITY STRING,
@@ -65,9 +65,15 @@ USING iceberg
 
 
 cancel_codes_ddl = f"""
-CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.cancellation_codes (
+CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_cancellation_codes (
     CANCELLATION_REASON STRING,
     CANCELLATION_DESCRIPTION STRING
 )
 USING iceberg
+"""
+
+
+# TODO
+agg_flights_ddl = f"""
+
 """
