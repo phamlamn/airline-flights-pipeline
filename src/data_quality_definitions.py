@@ -36,7 +36,7 @@ TABLES_CONFIG = {
     'dim_dates': {}
 }
 
-
+# ? do these need sparksession?
 class CheckStrategy:
     """Base interface"""
     def add_check(
