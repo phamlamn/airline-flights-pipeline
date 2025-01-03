@@ -2,19 +2,17 @@ import os
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType
 
-import raw_schemas
 import iceberg_ddl
-from src.data_quality import *
-from extract import read_csv, generate_dim_date_df
+from extract import extract_raw_data, generate_dim_dates_df
 from transform import do_raw_flights_transformation, do_agg_fact_flights_transformation
-from load import write_audit_publish
+from load import create_iceberg_tables, write_audit_publish_iceberg, write_iceberg
 
 
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
 
 
-def main():
+def init_spark() -> SparkSession:
     # Define config for SparkSession, such as the Iceberg catalog
     # which utilizes minio (S3-compatible) for local object storage,
     spark_configs = {
@@ -33,36 +31,35 @@ def main():
         .appName('US Flights Pipeline') \
         .config(map=spark_configs) \
         .getOrCreate()
+    
+    return spark
 
-    # Define .csv filepaths
-    data_path = '/home/iceberg/data'
-    flights_filename = f'{data_path}/flights.csv'
-    airlines_filename = f'{data_path}/airlines.csv'
-    airports_filename = f'{data_path}/airports.csv'
-    cancel_codes_filename = f'{data_path}/cancellation_codes.csv'
 
-    # Extract raw .csv files to DataFrame
-    flights_df = read_csv(spark, flights_filename, raw_schemas.flights_schema)
-    airlines_df = read_csv(spark, airlines_filename, raw_schemas.airlines_schema)
-    airports_df = read_csv(spark, airports_filename, raw_schemas.airports_schema)
-    cancel_codes_df = read_csv(spark, cancel_codes_filename, raw_schemas.cancel_codes_schema)
+def main():
+    # Initialize spark
+    spark = init_spark()
 
-    # Transform flights data (Create "date" column and add "is_delayed" column)
+    ## Extract raw data
+    flights_df, airlines_df, airports_df, cancel_codes_df = extract_raw_data(spark)
+    
+    # Create dim_dates df
+    dates_df = generate_dim_dates_df(spark)
+
+    ## Transform flights data (Create "date" column and add "is_delayed" column)
     flights_df = do_raw_flights_transformation(spark, flights_df)
-
-    # Create dim_date df
-    date_df = generate_dim_date_df(spark)
-
 
     ## Load source data into Iceberg (Silver-level)
     # Create Iceberg tables if not exists
-    spark.sql(iceberg_ddl.flights_ddl)
-    spark.sql(iceberg_ddl.airlines_ddl)
-    spark.sql(iceberg_ddl.airports_ddl)
-    spark.sql(iceberg_ddl.cancel_codes_ddl)
+    create_iceberg_tables(spark)
 
-    # Write-Audit-Publish flights to Iceberg
-    write_audit_publish(spark, flights_df, 'fact_flights')
+    # Write-Audit-Publish fact_flights to Iceberg
+    write_audit_publish_iceberg(spark, flights_df, 'fact_flights', iceberg_ddl.update_flights_ddl)
+
+    # Write dimension tables to Iceberg
+    write_iceberg(spark, airlines_df, 'dim_airlines')
+    write_iceberg(spark, airports_df, 'dim_airports')
+    write_iceberg(spark, cancel_codes_df, 'dim_cancel_codes')
+    write_iceberg(spark, dates_df, 'dim_dates')
 
 
     ## Load aggregated fact table into Iceberg (Gold-level)

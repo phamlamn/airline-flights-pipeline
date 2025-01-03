@@ -21,7 +21,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=password
       - AWS_REGION=us-east-1
     ports:
-      - 4041:4041
+      - 4040-4045:4040-4045
       - 8888:8888
       - 8080:8080
       - 18080:18080

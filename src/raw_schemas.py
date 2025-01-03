@@ -37,13 +37,13 @@ flights_schema = StructType([
 ])
 
 # Define airlines schema (do we just denormalize this?)
-airlines_schema = StructType(
+airlines_schema = StructType([
     StructField('IATA_CODE', StringType(), False),
     StructField('AIRLINE', StringType(), False)
-)
+])
 
 # Define airports schema
-airports_schema = StructType(
+airports_schema = StructType([
     StructField('IATA_CODE', StringType(), False),
     StructField('AIRPORT', StringType(), False),
     StructField('CITY', StringType(), False),
@@ -51,11 +51,11 @@ airports_schema = StructType(
     StructField('COUNTRY', StringType(), False),
     StructField('LATITUDE', FloatType(), False),
     StructField('LONGITUDE', FloatType(), False)
-)
+])
 
 # Define cancel_codes schema (do we just denormalize this?)
-cancel_codes_schema = StructType(
+cancel_codes_schema = StructType([
     StructField('CANCELLATION_REASON', StringType(), False),
     StructField('CANCELLATION_DESCRIPTION', StringType(), False)
-)
+])
 

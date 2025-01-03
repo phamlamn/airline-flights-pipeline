@@ -2,6 +2,25 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, lit, expr, when, to_date, year, month, day, dayofweek, quarter, broadcast
 from pyspark.sql.types import StructType
 
+import raw_schemas
+
+
+def extract_raw_data(spark: SparkSession) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
+    # Define .csv filepaths
+    data_path = '/home/iceberg/data'
+    flights_filename = f'{data_path}/flights.csv'
+    airlines_filename = f'{data_path}/airlines.csv'
+    airports_filename = f'{data_path}/airports.csv'
+    cancel_codes_filename = f'{data_path}/cancellation_codes.csv'
+
+    # Extract raw .csv files to DataFrame
+    flights_df = read_csv(spark, flights_filename, raw_schemas.flights_schema)
+    airlines_df = read_csv(spark, airlines_filename, raw_schemas.airlines_schema)
+    airports_df = read_csv(spark, airports_filename, raw_schemas.airports_schema)
+    cancel_codes_df = read_csv(spark, cancel_codes_filename, raw_schemas.cancel_codes_schema)
+    
+    return flights_df, airlines_df, airports_df, cancel_codes_df
+
 
 def read_csv(
     spark: SparkSession,
@@ -15,9 +34,9 @@ def read_csv(
 
 
 # TODO Generalize to any year
-def generate_dim_date_df(spark: SparkSession) -> DataFrame:
-    # Initialize date_df
-    date_df = spark.range(365) \
+def generate_dim_dates_df(spark: SparkSession) -> DataFrame:
+    # Initialize dates_df
+    dates_df = spark.range(365) \
         .withColumn('date', expr('date_add("2015-01-01", CAST(id AS INT))')) \
         .withColumn('year', year('date')) \
         .withColumn('month', month('date')) \
@@ -45,10 +64,10 @@ def generate_dim_date_df(spark: SparkSession) -> DataFrame:
     holidays_df = holidays_df.withColumn('holiday_date', to_date('holiday_date'))
 
     # Join holidays to date_df and add is_holiday column
-    date_df = date_df \
+    dates_df = dates_df \
         .join(
             broadcast(holidays_df),
-            date_df.date == holidays_df.holiday_date,
+            dates_df.date == holidays_df.holiday_date,
             'left'
         ) \
         .withColumn(
@@ -59,5 +78,5 @@ def generate_dim_date_df(spark: SparkSession) -> DataFrame:
         .sort('date')
 
     # Rearrange date to be first column,
-    date_df = date_df.select('date', *[col(c) for c in date_df.columns if c != 'date'])
-    return date_df
+    dates_df = dates_df.select('date', *[col(c) for c in dates_df.columns if c != 'date'])
+    return dates_df

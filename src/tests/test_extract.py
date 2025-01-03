@@ -3,17 +3,21 @@ from pyspark.sql.functions import lit
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from chispa import assert_df_equality
 
-from ..jobs.extract import read_csv, generate_dim_date_df
+from ..jobs.extract import extract_raw_data, read_csv, generate_dim_dates_df
+
+
+def test_extract_raw_data(spark):
+    pass
 
 
 def test_read_csv(spark):
     # Define schema and input test data
-    data = [("Alice", 30), ("Bob", 25)]
     schema = StructType([
         StructField("name", StringType(), True),
         StructField("age", IntegerType(), True)
     ])
-    
+    data = [("Alice", 30), ("Bob", 25)]
+
     # Create input df
     df = spark.createDataFrame(data, schema)
     
@@ -33,7 +37,7 @@ def test_read_csv(spark):
 
 def test_generate_dim_date_df(spark):
     # Generate dim_date df
-    df = generate_dim_date_df(spark)
+    df = generate_dim_dates_df(spark)
     
     # Ensure row count is correct
     assert df.count() == 365

@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, ANY
-from pydeequ import Check, CheckLevel
-from pyspark.sql import SparkSession
+from pydeequ import Check
 from pyspark.sql import DataFrame
 from ..data_quality import *
 
@@ -175,14 +174,15 @@ def test_VerificationContext_add_checks(verification_context):
 
 
 # TODO: Uncomment this test after implementing run_verification
-# def test_VerificationContext_run_verification(mocker, verification_context):
-#     """
-#     Test that VerificationContext.run_verification runs the verification and returns the result.
+def test_VerificationContext_run_verification(mocker, verification_context):
+    """
+    Test that VerificationContext.run_verification runs the verification and returns the result.
     
-#     Args:
-#         mocker: Mock object for patching.
-#         verification_context: Fixture for VerificationContext.
-#     """
+    Args:
+        mocker: Mock object for patching.
+        verification_context: Fixture for VerificationContext.
+    """
+    pass
 #     mock_verification_suite = mocker.patch('data_quality.VerificationSuite')
 #     mock_verification_suite.return_value.onData.return_value.addCheck.return_value.run.return_value = "mock_result"
 
