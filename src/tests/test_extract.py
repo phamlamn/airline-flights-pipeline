@@ -32,6 +32,7 @@ def test_read_csv(spark):
 
 
 def test_generate_dim_date_df(spark):
+    # Generate dim_date df
     df = generate_dim_date_df(spark)
     
     # Ensure row count is correct

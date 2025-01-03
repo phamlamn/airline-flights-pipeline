@@ -1,6 +1,7 @@
 import os
 from pyspark.sql import SparkSession, DataFrame
 
+from ..data_quality import run_data_quality_checks
 
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
@@ -43,8 +44,8 @@ def write_audit_publish(
     result = run_data_quality_checks(spark, staged_df, table_name)
 
     # Publish if DQ passes, else log failure and break
-    # TODO fastforward or cherrypick?
     if result.status == 'Success':
+        # TODO fastforward or cherrypick?
         spark.sql(f'CALL airline.system.fast_forward("db.flights", "main", "{audit_branch_name}")')
         # # Get snapshot id
         # spark.sql('SELECT snapshot_id FROM airline.db.flights.refs WHERE name="audit_branch_flights"').show()
