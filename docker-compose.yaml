@@ -14,8 +14,6 @@ services:
       - ./notebooks:/home/iceberg/notebooks/notebooks
       - ./data:/home/iceberg/data
       - ./src:/home/iceberg/src
-    env_file:
-      - .env
     environment:
       - AWS_ACCESS_KEY_ID=admin
       - AWS_SECRET_ACCESS_KEY=password
