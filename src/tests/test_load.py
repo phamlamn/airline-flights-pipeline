@@ -1,6 +1,6 @@
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from chispa import assert_df_equality
-from ..jobs.load import create_iceberg_tables, write_audit_publish_iceberg, write_iceberg, deduplicate_across_all_columns
+from ..jobs.load import create_iceberg_tables, write_audit_publish_iceberg, write_iceberg, deduplicate_input_all_columns_against_source
 
 
 def test_create_iceberg_tables(spark):
@@ -15,7 +15,7 @@ def test_write_iceberg(spark):
     pass
 
 
-def test_deduplicate_across_all_columns(spark):
+def test_deduplicate_input_all_columns_against_source(spark):
     # Define schema and input test data
     schema = StructType([
         StructField("name", StringType(), True),
@@ -29,7 +29,7 @@ def test_deduplicate_across_all_columns(spark):
     source_df = spark.createDataFrame(source_data, schema)
     
     # Deduplicate input data across all columns from source df
-    result_df = deduplicate_across_all_columns(input_df, source_df)
+    result_df = deduplicate_input_all_columns_against_source(input_df, source_df)
     
     # Define expected data and DataFrame
     expected_data = [("Charlie", 35)]

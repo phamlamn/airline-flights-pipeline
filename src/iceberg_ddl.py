@@ -87,12 +87,12 @@ CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_dates (
 
 
 # TODO
-agg_flights_ddl = f"""
+agg_fact_flights_ddl = f"""
 """
 
 
-update_flights_ddl = """
-MERGE INTO airline.db.flights t
+update_fact_flights_ddl = """
+MERGE INTO {CATALOG_NAME}.{DATABASE_NAME}.fact_flights t
 USING {input_view_name} s
     ON  t.date = s.date
     AND t.airline = s.airline

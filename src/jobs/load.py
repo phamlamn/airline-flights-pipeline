@@ -2,7 +2,7 @@ import os
 from pyspark.sql import SparkSession, DataFrame
 
 import iceberg_ddl
-from ..data_quality import run_data_quality_checks
+from data_quality import run_data_quality_checks
 
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
@@ -23,6 +23,7 @@ def create_iceberg_tables(spark: SparkSession) -> None:
     spark.sql(iceberg_ddl.dim_dates_ddl)
 
 
+# TODO how to handle cleaning up audit branches? Auto cleanup, ie. expire branch?
 def write_audit_publish_iceberg(
     spark: SparkSession,
     input_df: DataFrame,
@@ -38,45 +39,62 @@ def write_audit_publish_iceberg(
         table_name: Name of the Iceberg table
     
     Returns:
-        True if write and publish is successful
+        True if write and publish is successful, False otherwise
     """
-    
-    # Create audit branch, and set "spark.wap.branch" to ensure we write to audit branch
-    audit_branch_name = f'audit_{table_name}'
-    spark.sql(f'ALTER TABLE {CATALOG_NAME}.{DATABASE_NAME}.{table_name} CREATE BRANCH {audit_branch_name}')
-    spark.conf.set('spark.wap.branch', audit_branch_name)
-    
     # Dedup input data across all columns from source table
-    input_df = deduplicate_across_all_columns(
+    input_df = deduplicate_input_all_columns_against_source(
         input_df,
         spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
     )
+    
+    # Return False if there are no new records to write,
+    # preventing addition snapshots from being added with no data changes
+    if input_df.count() == 0:
+        print(f"No new records to write to {table_name}")
+        return False
+    
+    # Create audit branch
+    audit_branch_name = f'audit_{table_name}'
+    spark.sql(f'ALTER TABLE {CATALOG_NAME}.{DATABASE_NAME}.{table_name} CREATE BRANCH {audit_branch_name}')
+    
+    # Set "write.wap.enabled" table property
+    spark.sql(f'ALTER TABLE {CATALOG_NAME}.{DATABASE_NAME}.{table_name} SET TBLPROPERTIES ("write.wap.enabled" = "true")')
+    
+    # Set "spark.wap.branch" to ensure we write to audit branch
+    spark.conf.set('spark.wap.branch', audit_branch_name)
     
     ## Write to audit branch
     # Create temp view to use during write
     input_df.createOrReplaceTempView(table_name)
     
-    # Write data to table using upsert/merge
-    merge_ddl = merge_ddl.format(input_view_name=table_name)
+    # Write data to table using merge/upsert
+    merge_ddl = merge_ddl.format(
+        CATALOG_NAME=CATALOG_NAME,
+        DATABASE_NAME=DATABASE_NAME,
+        input_view_name=table_name
+    )
     spark.sql(merge_ddl)
     
     ## Perform Data Quality checks
-    # Create df from newly staged table
+    # Load data from newly staged table
     staged_df = spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
     
     # Run Data Quality checks
     result = run_data_quality_checks(spark, staged_df, table_name)
 
-    # Publish if DQ passes, else log failure and break
+    # Publish if DQ passes, else drop branch and raise error
     published = False
     if result.status == 'Success':
-        # TODO fastforward or cherrypick?
-        spark.sql(f'CALL airline.system.fast_forward("db.flights", "main", "{audit_branch_name}")')
+        # Publish audit branch to main branch
+        print('Data Quality checks passed! Publishing audit branch...')
+        spark.sql(f'CALL {CATALOG_NAME}.system.fast_forward("{DATABASE_NAME}.{table_name}", "main", "{audit_branch_name}")')
         published = True
-        # # Get snapshot id
-        # spark.sql('SELECT snapshot_id FROM airline.db.flights.refs WHERE name="audit_branch_flights"').show()
-        # spark.sql('CALL airline.system.cherrypick_snapshot("db.flights", 668148544964107792)')
+        
     else:
+        # Drop branch if DQ fails
+        print(f'Data Quality checks failed. Dropping audit branch: {audit_branch_name}')
+        spark.sql(f'ALTER TABLE {CATALOG_NAME}.{DATABASE_NAME}.{table_name} DROP BRANCH `{audit_branch_name}`')
+        # Raise error
         raise ValueError('Data Quality checks failed. Publishing aborted.')
     
     return published
@@ -101,10 +119,15 @@ def write_iceberg(
         True if write is successful, False otherwise
     """
     # Dedup input data across all columns from source table
-    input_df = deduplicate_across_all_columns(
+    input_df = deduplicate_input_all_columns_against_source(
         input_df,
         spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
     )
+    
+    # Return False if there are no new records to write
+    if input_df.count() == 0:
+        print(f"No new records to write to {table_name}")
+        return False
     
     try:
         if mode == 'append':
@@ -117,7 +140,7 @@ def write_iceberg(
         return False
 
 
-def deduplicate_across_all_columns(
+def deduplicate_input_all_columns_against_source(
     input_df: DataFrame, 
     source_df: DataFrame
 ) -> DataFrame:
@@ -131,7 +154,7 @@ def deduplicate_across_all_columns(
     Returns:
         DataFrame with duplicates removed
     """
-    # Perform anti-join to remove duplicates
+    # Perform left-anti-join to remove duplicates
     result_df = input_df.join(
         source_df,
         on=input_df.columns,

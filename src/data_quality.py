@@ -1,6 +1,6 @@
 from pydeequ import *
 from pydeequ.checks import Check, CheckLevel
-from pydeequ.verification import VerificationSuite
+from pydeequ.verification import VerificationSuite, VerificationResult
 
 from pyspark.sql import SparkSession, DataFrame
 
@@ -146,10 +146,16 @@ class VerificationContext:
             .onData(self.df) \
             .addCheck(self.check) \
             .run()
+        # Perform cleanup
+        self.clean_up()
         return result
+    
+    def clean_up(self):
+        # Clean up PyDeequ resources
+        self.spark.sparkContext._gateway.shutdown_callback_server()
 
 
-def run_data_quality_checks(spark: SparkSession, df: DataFrame, table_name: str):
+def run_data_quality_checks(spark: SparkSession, df: DataFrame, table_name: str) -> VerificationResult:
     """
     Run data quality checks for a given table and DataFrame.
 
@@ -179,7 +185,6 @@ def run_data_quality_checks(spark: SparkSession, df: DataFrame, table_name: str)
         print(f"Data quality checks passed for {table_name}")
     else:
         print(f"Data quality checks failed for {table_name}")
-        for constraint in result.checkResults:
-            print(f"- {constraint.constraint}: {constraint.constraint_status}")
+        VerificationResult.checkResultsAsDataFrame(spark, result).show(truncate=False)
 
     return result

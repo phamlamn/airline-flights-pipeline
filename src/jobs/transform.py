@@ -2,6 +2,22 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import to_date, concat_ws, when, col, lit
 
 
+def remove_duplicate_flights(spark: SparkSession, input_df: DataFrame) -> DataFrame:
+    """
+    Remove duplicate flights based on unique columns in the input DataFrame.
+
+    Args:
+        spark: SparkSession object
+        input_df: Input DataFrame
+    
+    Returns:
+        DataFrame with duplicates removed
+    """
+    # Deduplicate over unique columns
+    deduped_df = input_df.dropDuplicates(["date", "airline", "flight_number", "scheduled_departure"])
+    return deduped_df
+
+
 def do_raw_flights_transformation(spark: SparkSession, input_df: DataFrame) -> DataFrame:
     # Add date column and remove other date-related columns
     flights_df = input_df \
@@ -34,4 +50,3 @@ def do_agg_fact_flights_transformation(spark: SparkSession):
     
     # Perform rollup
     pass
-

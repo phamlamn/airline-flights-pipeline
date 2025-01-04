@@ -138,7 +138,12 @@ def verification_context(spark, sample_df) -> VerificationContext:
         "non_negative": ["col3"],
         "containment": {"col1": ["val1", "val3"]}
     }
-    return VerificationContext(spark, sample_df, "test_table", table_config)
+    context = VerificationContext(spark, sample_df, "test_table", table_config)
+    yield context
+    
+    # Clean up after fixture is used
+    context.clean_up()
+    
 
 def test_VerificationContext_add_checks(verification_context):
     """
@@ -173,16 +178,16 @@ def test_VerificationContext_add_checks(verification_context):
     assert constraints == expected
 
 
-# TODO: Uncomment this test after implementing run_verification
-def test_VerificationContext_run_verification(mocker, verification_context):
-    """
-    Test that VerificationContext.run_verification runs the verification and returns the result.
+# # TODO: Uncomment this test after implementing run_verification
+# def test_VerificationContext_run_verification(verification_context):
+#     """
+#     Test that VerificationContext.run_verification runs the verification and returns the result.
     
-    Args:
-        mocker: Mock object for patching.
-        verification_context: Fixture for VerificationContext.
-    """
-    pass
+#     Args:
+#         mocker: Mock object for patching.
+#         verification_context: Fixture for VerificationContext.
+#     """
+#     pass
 #     mock_verification_suite = mocker.patch('data_quality.VerificationSuite')
 #     mock_verification_suite.return_value.onData.return_value.addCheck.return_value.run.return_value = "mock_result"
 
