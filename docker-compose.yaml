@@ -23,8 +23,6 @@ services:
       - 8888:8888
       - 8080:8080
       - 18080:18080
-      # - 10000:10000
-      # - 10001:10001
 
   rest:
     image: tabulario/iceberg-rest

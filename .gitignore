@@ -3,4 +3,14 @@
 data/
 notebooks/.ipynb_checkpoints
 
+
+src/__pycache__/
+src/.pytest_cache/
+src/jobs/__pycache__/
+src/jobs/.pytest_cache/
+src/tests/__pycache__/
+src/tests/.pytest_cache/
+
+
 .vscode/
+.DS_Store
