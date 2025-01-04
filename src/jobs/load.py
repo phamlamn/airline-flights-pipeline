@@ -1,5 +1,6 @@
 import os
 from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import expr
 
 import iceberg_ddl
 from data_quality import run_data_quality_checks
@@ -41,17 +42,12 @@ def write_audit_publish_iceberg(
     Returns:
         True if write and publish is successful, False otherwise
     """
-    # Dedup input data across all columns from source table
-    input_df = deduplicate_input_all_columns_against_source(
-        input_df,
-        spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
-    )
+    published = False
     
-    # Return False if there are no new records to write,
-    # preventing addition snapshots from being added with no data changes
-    if input_df.count() == 0:
-        print(f"No new records to write to {table_name}")
-        return False
+    # Filter new records and check for updates, return if no new records
+    input_df, has_new_records = filter_new_records_and_check_updates(spark, input_df, table_name)
+    if not has_new_records:
+        return published
     
     # Create audit branch
     audit_branch_name = f'audit_{table_name}'
@@ -83,7 +79,6 @@ def write_audit_publish_iceberg(
     result = run_data_quality_checks(spark, staged_df, table_name)
 
     # Publish if DQ passes, else drop branch and raise error
-    published = False
     if result.status == 'Success':
         # Publish audit branch to main branch
         print('Data Quality checks passed! Publishing audit branch...')
@@ -118,34 +113,32 @@ def write_iceberg(
     Returns:
         True if write is successful, False otherwise
     """
-    # Dedup input data across all columns from source table
-    input_df = deduplicate_input_all_columns_against_source(
-        input_df,
-        spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
-    )
+    written = False
     
-    # Return False if there are no new records to write
-    if input_df.count() == 0:
-        print(f"No new records to write to {table_name}")
-        return False
+    # Filter new records and check for updates, return if no new records
+    input_df, has_new_records = filter_new_records_and_check_updates(spark, input_df, table_name)
+    if not has_new_records:
+        return written
     
     try:
         if mode == 'append':
             input_df.writeTo(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}').append()
-        return True
+            written = True
+        return written
     
     except Exception as e:
         # Log the exception if needed
         print(f"Error writing to Iceberg table: {e}")
-        return False
+        return written
 
 
-def deduplicate_input_all_columns_against_source(
+def remove_existing_records_from_input(
     input_df: DataFrame, 
     source_df: DataFrame
 ) -> DataFrame:
     """
-    Deduplicate input DataFrame across all columns by performing an anti-join with the source DataFrame.
+    Remove duplicates from input DataFrame by comparing against the source DataFrame by performing a null-safe anti-join.
+    By default, spark does not handle null comparisons well in joins, so we need to generate a null-safe join condition for all columns.
     
     Args:
         input_df: Input DataFrame
@@ -154,11 +147,42 @@ def deduplicate_input_all_columns_against_source(
     Returns:
         DataFrame with duplicates removed
     """
-    # Perform left-anti-join to remove duplicates
-    result_df = input_df.join(
-        source_df,
-        on=input_df.columns,
+    # Generate null-safe join condition for all columns
+    join_condition = " AND ".join([f"input_df.{col} <=> source_df.{col}" for col in input_df.columns])
+
+    # Perform left anti-join to remove duplicates
+    result_df = input_df.alias('input_df').join(
+        source_df.alias('source_df'),
+        on=expr(join_condition),
         how='left_anti'
     )
     
     return result_df
+
+
+def filter_new_records_and_check_updates(
+    spark: SparkSession,
+    input_df: DataFrame,
+    table_name: str
+) -> tuple[DataFrame, bool]:
+    """
+    Deduplicate input DataFrame against the source table and check if there are new records to write.
+    
+    Args:
+        spark: SparkSession object
+        input_df: Input DataFrame
+        table_name: Name of the Iceberg table
+    
+    Returns:
+        Tuple containing the deduplicated DataFrame and a flag indicating if there are new records to write
+    """
+    # Dedup input data across all columns from source table
+    source_df = spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
+    deduped_df = remove_existing_records_from_input(input_df, source_df)
+    
+    # Check if there are new records to write
+    has_new_records = deduped_df.count() > 0
+    if not has_new_records:
+        print(f" * No new records to write to {table_name}")
+    
+    return deduped_df, has_new_records

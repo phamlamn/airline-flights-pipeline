@@ -42,6 +42,7 @@ def main():
     # ==============================================================================
     ## Extract raw data
     print("Extracting raw data...")
+    
     flights_df, airlines_df, airports_df, cancel_codes_df = extract_raw_data(spark)
     
     # Create dim_dates df
