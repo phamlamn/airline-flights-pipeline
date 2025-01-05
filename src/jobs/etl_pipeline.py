@@ -4,7 +4,7 @@ from pyspark.sql.types import StructType
 
 import iceberg_ddl
 from extract import extract_raw_data, generate_dim_dates_df
-from transform import remove_duplicate_flights, do_raw_flights_transformation, do_agg_fact_flights_transformation
+from transform import remove_duplicate_records, do_raw_flights_transformation, do_agg_fact_flights_transformation
 from load import create_iceberg_tables, write_audit_publish_iceberg, write_iceberg
 
 
@@ -12,7 +12,7 @@ CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
 
 
-def init_spark() -> SparkSession:
+def init_spark(app_name: str = 'US Flights Pipeline') -> SparkSession:
     # Define the configuration for SparkSession, including the Iceberg catalog
     # which uses MinIO (an S3-compatible object storage) for local storage.
     spark_configs = {
@@ -28,7 +28,7 @@ def init_spark() -> SparkSession:
 
     # Initialize SparkSession
     spark = SparkSession.builder \
-        .appName('US Flights Pipeline') \
+        .appName(app_name) \
         .config(map=spark_configs) \
         .getOrCreate()
     
@@ -56,7 +56,7 @@ def main():
     flights_df = do_raw_flights_transformation(spark, flights_df)
     
     # Remove duplicate flights
-    flights_df = remove_duplicate_flights(spark, flights_df)
+    flights_df = remove_duplicate_records(spark, flights_df, ["date", "airline", "flight_number", "scheduled_departure"])
 
     # ==============================================================================
     ## Load source data into Iceberg (Silver-level)
@@ -67,7 +67,7 @@ def main():
 
     # Write-Audit-Publish fact_flights to Iceberg (Idempotent)
     print("Writing (WAP) fact_flights to Iceberg...")
-    result = write_audit_publish_iceberg(spark, flights_df, 'fact_flights', iceberg_ddl.update_fact_flights_ddl)
+    result = write_audit_publish_iceberg(spark, flights_df, 'fact_flights', iceberg_ddl.merge_fact_flights_ddl)
     print(f"Write-Audit-Publish result: {result}")
 
     # Write dimension tables to Iceberg (Idempotent)
@@ -81,8 +81,11 @@ def main():
     # ==============================================================================
     ## Load aggregated fact table into Iceberg (Gold-level)
     # Perform aggregated fact table transformation
+    # agg_df = do_agg_fact_flights_transformation(spark)
     
+    # TODO implement Data Quality for agg_fact_flights
     # Write-Audit-Publish aggregated fact table to Iceberg
+    # result = write_audit_publish_iceberg(spark, agg_df, 'agg_fact_flights', iceberg_ddl.merge_agg_fact_flights_ddl)
 
 
 

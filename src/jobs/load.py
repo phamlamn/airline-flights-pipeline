@@ -61,13 +61,14 @@ def write_audit_publish_iceberg(
     
     ## Write to audit branch
     # Create temp view to use during write
-    input_df.createOrReplaceTempView(table_name)
+    input_view = f'input_df'
+    input_df.createOrReplaceTempView(input_view)
     
     # Write data to table using merge/upsert
     merge_ddl = merge_ddl.format(
         CATALOG_NAME=CATALOG_NAME,
         DATABASE_NAME=DATABASE_NAME,
-        input_view_name=table_name
+        input_view_name=input_view
     )
     spark.sql(merge_ddl)
     

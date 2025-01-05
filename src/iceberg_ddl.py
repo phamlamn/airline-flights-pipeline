@@ -83,15 +83,39 @@ CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_dates (
     holiday_name STRING,
     is_holiday BOOLEAN
 )
+USING iceberg
 """
 
 
-# TODO
+# TODO (also update design specification) (Floats or Double?)
 agg_fact_flights_ddl = f"""
+CREATE TABLE {CATALOG_NAME}.{DATABASE_NAME}.agg_fact_flights (
+    year INT,
+    month INT,
+    day_of_week INT,
+    airline STRING,
+    origin_airport STRING,
+    total_flights BIGINT NOT NULL,
+    delayed_flights BIGINT NOT NULL,
+    delayed_rate DOUBLE,
+    avg_delay_time DOUBLE,
+    cancelled_flights BIGINT NOT NULL,
+    cancelled_rate DOUBLE,
+    cancellations_A BIGINT NOT NULL,
+    cancellations_B BIGINT NOT NULL,
+    cancellations_C BIGINT NOT NULL,
+    cancellations_D BIGINT NOT NULL,
+    percent_cancellations_A DOUBLE,
+    percent_cancellations_B DOUBLE,
+    percent_cancellations_C DOUBLE,
+    percent_cancellations_D DOUBLE,
+    agg_level STRING NOT NULL
+)
+USING iceberg
 """
 
 
-update_fact_flights_ddl = """
+merge_fact_flights_ddl = """
 MERGE INTO {CATALOG_NAME}.{DATABASE_NAME}.fact_flights t
 USING {input_view_name} s
     ON  t.date = s.date
@@ -99,4 +123,8 @@ USING {input_view_name} s
     AND t.flight_number = s.flight_number
     AND t.scheduled_departure = s.scheduled_departure
 WHEN NOT MATCHED THEN INSERT *
+"""
+
+
+merge_agg_fact_flights_ddl = f"""
 """

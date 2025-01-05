@@ -66,6 +66,9 @@ TABLES_CONFIG = {
     "dim_airports": {},
     "dim_cancellation_reasons": {},
     "dim_dates": {},
+    "agg_fact_flights": {
+        # TODO (also update design specification)
+    }
 }
 
 

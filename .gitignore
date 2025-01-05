@@ -11,6 +11,7 @@ src/jobs/.pytest_cache/
 src/tests/__pycache__/
 src/tests/.pytest_cache/
 
+src/jobs/temp.py
 
 .vscode/
 .DS_Store
