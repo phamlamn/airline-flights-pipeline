@@ -81,11 +81,11 @@ def main():
     # ==============================================================================
     ## Load aggregated fact table into Iceberg (Gold-level)
     # Perform aggregated fact table transformation
-    # agg_df = do_agg_fact_flights_transformation(spark)
+    agg_df = do_agg_fact_flights_transformation(spark)
     
     # TODO implement Data Quality for agg_fact_flights
     # Write-Audit-Publish aggregated fact table to Iceberg
-    # result = write_audit_publish_iceberg(spark, agg_df, 'agg_fact_flights', iceberg_ddl.merge_agg_fact_flights_ddl)
+    result = write_audit_publish_iceberg(spark, agg_df, 'agg_fact_flights', iceberg_ddl.merge_agg_fact_flights_ddl)
 
 
 

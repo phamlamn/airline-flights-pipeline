@@ -1,9 +1,11 @@
 import os
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import expr
+from pyspark.errors import AnalysisException
 
 import iceberg_ddl
 from data_quality import run_data_quality_checks
+
 
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
@@ -18,6 +20,7 @@ def create_iceberg_tables(spark: SparkSession) -> None:
     """
     # Create Iceberg tables if not exists
     spark.sql(iceberg_ddl.fact_flights_ddl)
+    spark.sql(iceberg_ddl.agg_fact_flights_ddl)
     spark.sql(iceberg_ddl.dim_airlines_ddl)
     spark.sql(iceberg_ddl.dim_airports_ddl)
     spark.sql(iceberg_ddl.dim_cancel_codes_ddl)
@@ -44,7 +47,7 @@ def write_audit_publish_iceberg(
     """
     published = False
     
-    # Filter new records and check for updates, return if no new records
+    # Filter new records and check for updates, return if no new records to insert
     input_df, has_new_records = filter_new_records_and_check_updates(spark, input_df, table_name)
     if not has_new_records:
         return published
@@ -61,7 +64,7 @@ def write_audit_publish_iceberg(
     
     ## Write to audit branch
     # Create temp view to use during write
-    input_view = f'input_df'
+    input_view = 'input_df'
     input_df.createOrReplaceTempView(input_view)
     
     # Write data to table using merge/upsert
@@ -177,8 +180,16 @@ def filter_new_records_and_check_updates(
     Returns:
         Tuple containing the deduplicated DataFrame and a flag indicating if there are new records to write
     """
+    try:
+        source_df = spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
+    
+    # TODO add test case for this
+    # If table does not exist yet, we can assume there are no duplicates in data
+    except AnalysisException:
+        print(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name} does not exist. Input data has not been altered.')
+        return input_df, False
+    
     # Dedup input data across all columns from source table
-    source_df = spark.table(f'{CATALOG_NAME}.{DATABASE_NAME}.{table_name}')
     deduped_df = remove_existing_records_from_input(input_df, source_df)
     
     # Check if there are new records to write

@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_cancellation_codes
 USING iceberg
 """
 
+
 dim_dates_ddl = f"""
 CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.dim_dates (
     date DATE,
@@ -87,9 +88,8 @@ USING iceberg
 """
 
 
-# TODO (also update design specification) (Floats or Double?)
 agg_fact_flights_ddl = f"""
-CREATE TABLE {CATALOG_NAME}.{DATABASE_NAME}.agg_fact_flights (
+CREATE TABLE IF NOT EXISTS {CATALOG_NAME}.{DATABASE_NAME}.agg_fact_flights (
     year INT,
     month INT,
     day_of_week INT,
@@ -109,6 +109,7 @@ CREATE TABLE {CATALOG_NAME}.{DATABASE_NAME}.agg_fact_flights (
     percent_cancellations_B DOUBLE,
     percent_cancellations_C DOUBLE,
     percent_cancellations_D DOUBLE,
+    time_agg_level STRING NOT NULL,
     agg_level STRING NOT NULL
 )
 USING iceberg
@@ -126,5 +127,13 @@ WHEN NOT MATCHED THEN INSERT *
 """
 
 
-merge_agg_fact_flights_ddl = f"""
+merge_agg_fact_flights_ddl = """
+MERGE INTO {CATALOG_NAME}.{DATABASE_NAME}.agg_fact_flights t
+USING {input_view_name} s
+    ON  t.year = s.year
+    AND t.month = s.month
+    AND t.day_of_week = s.day_of_week
+    AND t.airline = s.airline
+    AND t.origin_airport = s.origin_airport
+WHEN NOT MATCHED THEN INSERT *
 """

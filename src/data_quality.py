@@ -62,12 +62,44 @@ TABLES_CONFIG = {
             "is_delayed": ["0", "1"],
         },
     },
+    
     "dim_airlines": {},
     "dim_airports": {},
     "dim_cancellation_reasons": {},
     "dim_dates": {},
+    
+    # TODO finalize data quality checks(also update design specification)
     "agg_fact_flights": {
-        # TODO (also update design specification)
+        "completeness": [
+            "total_flights",
+            "delayed_flights",
+            "cancelled_flights",
+            "cancellations_A",
+            "cancellations_B",
+            "cancellations_C",
+            "cancellations_D",
+            "time_agg_level",
+            "agg_level"
+        ],
+        'non_negative': [
+            "total_flights",
+            "delayed_flights",
+            "delayed_rate",
+            "cancelled_flights",
+            "cancelled_rate",
+            "cancellations_A",
+            "cancellations_B",
+            "cancellations_C",
+            "cancellations_D",
+            "percent_cancellations_A",
+            "percent_cancellations_B",
+            "percent_cancellations_C",
+            "percent_cancellations_D"
+        ],
+        "containment": {
+            "time_agg_level": ["all", "year", "month", "year_month", "day_of_week"],
+            # "agg_level": ["all", "airport", "origin_airport"]
+        }
     }
 }
 
@@ -110,6 +142,8 @@ class ContainmentCheckStrategy(CheckStrategy):
             check.isContainedIn(col, values)
         return check
 
+
+# TODO add CheckStrategies (see agg_fact_flights spec) and add unit tests!
 
 class DataQualityStrategyFactory:
     STRATEGY_MAPPING = {
