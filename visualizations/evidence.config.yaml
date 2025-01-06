@@ -67,6 +67,8 @@ plugins:
   datasources:
     # You can add additional datasources here by adding npm packages. 
     # Make to also add them to `package.json`.
+    evidence-connector-parquet: {}
+
     "@evidence-dev/bigquery": { }
     "@evidence-dev/csv": { }
     "@evidence-dev/databricks": { }
