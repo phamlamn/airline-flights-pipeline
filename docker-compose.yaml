@@ -76,6 +76,19 @@ services:
       tail -f /dev/null
       "
 
+  evidence:
+    image: evidencedev/devenv
+    container_name: evidence-flights
+    networks:
+      iceberg_net:
+    depends_on:
+      - rest
+      - minio
+    volumes:
+      - ./visualizations:/evidence-workspace
+    ports:
+      - 3000:3000
+
 
 networks:
   iceberg_net:
