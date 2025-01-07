@@ -122,6 +122,9 @@ def agg_flight_metrics_by_grouping_sets(spark: SparkSession, view_name: str) -> 
 
     -- Group by various levels of granularity using GROUPING SETS (equivalent to UNION ALL for multiple GROUP BY queries)
     GROUP BY GROUPING SETS (
+        -- Group by all
+        (),
+        
         -- Group by time periods
         (year),
         (year, month),
@@ -131,11 +134,13 @@ def agg_flight_metrics_by_grouping_sets(spark: SparkSession, view_name: str) -> 
         (airline), 
         (airline, year), 
         (airline, year, month),
+        (airline, day_of_week),
 
         -- Group by origin airport at different levels
         (origin_airport), 
         (origin_airport, year), 
-        (origin_airport, year, month)
+        (origin_airport, year, month),
+        (origin_airport, day_of_week)
     )
     """
 
