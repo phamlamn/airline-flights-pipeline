@@ -2,33 +2,56 @@
 title: 2015 US Domestic Flights Analysis
 ---
 
-<!-- Source code button -->
+
+
+```sql airlines
+SELECT
+    airline
+FROM agg_fact_flights.data
+WHERE agg_level = 'airline'
+    AND time_agg_level = 'year'
+```
+
+
+
 <Grid cols=4>
+    <!-- Selection for airline -->
+    <Group>
+        <!-- Linebreak for formatting -->
+        <LineBreak lines=1/>
+        <Dropdown data={airlines} name=airline_dropdown value=airline defaultValue='%' title="Select an Airline">
+            <DropdownOption value='%' valueLabel='All'/>
+        </Dropdown>
+    </Group>
+
     <!-- Blank groups to force button in the fourth column -->
     <Group/>
     <Group/>
-    <Group/>
+
+    <!-- Source code button -->
     <LinkButton url='https://github.com/phamlamn/airline-flights-pipeline'>
         Source Code
     </LinkButton>
 </Grid>
 
 
----
+
 
 <!-- Big Value Primary stats: Total flights, delayed flights, cancelled flights -->
 ```sql total_stats_2015
 select
-    total_flights,
-    delayed_flights,
-    delayed_rate,
-    avg_delay_time,
-    cancelled_flights,
-    cancelled_rate,
+    sum(total_flights) as total_flights,
+    sum(delayed_flights) as delayed_flights,
+    avg(delayed_rate) as delayed_rate,
+    avg(avg_delay_time) as avg_delay_time,
+    sum(cancelled_flights) as cancelled_flights,
+    avg(cancelled_rate) as cancelled_rate,
 from agg_fact_flights.data
 where time_agg_level = 'year'
-    AND agg_level = 'all'
+    AND agg_level = 'airline'
+    AND airline like ('${inputs.airline_dropdown.value}')
     AND year = 2015
+group by year
 ```
 <Grid cols=3>
     <BigValue 
@@ -66,8 +89,9 @@ where time_agg_level = 'year'
 </Grid>
 
 
----
 
+
+<!-- Stacked chart for: Total flights, delayed flights, cancelled flights -->
 ```sql unpivoted_flight_volume_monthly
 WITH volume AS (
   SELECT
@@ -113,10 +137,6 @@ INTO
 	NAME metric
 	VALUE volume
 ```
-<Dropdown data={airlines} name=airline_dropdown value=airline defaultValue='%' title="Select an Airline">
-    <DropdownOption value='%' valueLabel='All'/>
-</Dropdown>
-
 <BarChart
     data={unpivoted_flight_volume_monthly}
     x=month
@@ -144,14 +164,8 @@ INTO
 />
 
 
-```sql airlines
-SELECT
-    airline
-FROM agg_fact_flights.data
-WHERE agg_level = 'airline'
-    AND time_agg_level = 'year'
-```
 
+<!-- Individual Breakdown charts -->
 ```sql flight_volume_by_month
 SELECT
     year,

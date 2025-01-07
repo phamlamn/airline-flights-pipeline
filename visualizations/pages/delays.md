@@ -2,19 +2,35 @@
 title: Delay Analysis
 ---
 
+
+```sql airlines
+SELECT
+    airline
+FROM agg_fact_flights.data
+WHERE agg_level = 'airline'
+    AND time_agg_level = 'year'
+```
+
+
 <!-- Delay Stats by Month -->
 ```sql delay_statistics
 SELECT 
     year, 
     month,
-    delayed_rate,
-    avg_delay_time
+    avg(delayed_rate) as delayed_rate,
+    avg(avg_delay_time) as avg_delay_time
 FROM 
     agg_fact_flights.data
 WHERE 
     time_agg_level = 'year_month'
-    AND agg_level = 'all'
+    AND agg_level = 'airline'
+    AND airline like ('${inputs.airline_dropdown2.value}')
+GROUP BY year, month
 ```
+<Dropdown data={airlines} name=airline_dropdown2 value=airline defaultValue='%' title="Select an Airline">
+    <DropdownOption value='%' valueLabel='All'/>
+</Dropdown>
+
 <LineChart
     data={delay_statistics}
     x=month
@@ -25,8 +41,11 @@ WHERE
     xAxisTitle=Month
     yAxisTitle="Delayed Rate (%)"
     y2AxisTitle="Avg Delay Time (Minutes)"
+    yFmt=pct2
     xTickMarks=true
 />
+
+
 
 <!-- TODO How does the % of delayed flights vary throughout the year? What about for flights leaving from Boston (BOS) specifically?
 ```sql delay_statistics_by_origin_airport
@@ -78,10 +97,13 @@ ORDER BY airline
     data={airline_reliability}
     x=airline
     y=delayed_rate
+    yFmt=pct2
     y2=avg_delay_time
     title="Airline Reliability"
     subtitle="in terms of on-time departure"
     xAxisTitle=Airline
+    yAxisTitle="Delayed Rate (%)"
+    y2AxisTitle="Avg Delay Time (Minutes)"
     xTickMarks=true
 />
 <!-- Airline code to airline name... -->
