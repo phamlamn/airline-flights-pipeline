@@ -80,3 +80,6 @@ plugins:
     "@evidence-dev/sqlite": { }
     "@evidence-dev/trino": { }
     "@evidence-dev/motherduck": { }
+
+deployment:
+  basePath: /airline-flights-pipeline
