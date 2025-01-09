@@ -15,3 +15,5 @@ src/jobs/temp.py
 
 .vscode/
 .DS_Store
+
+temp*.md
