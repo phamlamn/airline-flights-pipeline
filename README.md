@@ -49,6 +49,7 @@ The **Airline Flights Pipeline** project is an end-to-end ETL (Extract, Transfor
 
 ## Design Specification
 Ensures proper design and can be validated by stakeholders prior to implementation. For more details, refer to the [Design Specification](docs/Design_Specification.md).
+
 ![Design Spec Preview 1](images/design_spec1.png)
 ![Design Spec Preview 2](images/design_spec2.png)
 
