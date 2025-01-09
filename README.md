@@ -6,7 +6,6 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Pipeline Architecture](#pipeline-architecture)
-  - [Key Steps in the Pipeline](#key-steps-in-the-pipeline)
 - [Example Dashboard](#example-dashboard)
 - [Design Specification](#design-specification)
 - [Data Sources](#data-sources)
@@ -92,12 +91,12 @@ Ensure the following tools and libraries are installed:
     docker exec -it spark-iceberg-flights bash
     ```
 
-5. Install Python dependencies:
+5. Install Python dependencies in Spark-Iceberg container:
     ```sh
     pip install -r requirements.txt
     ```
 
-5. Download the Deequ jar
+5. Download the Deequ jar in Spark-Iceberg container:
     ```sh
     curl https://repo1.maven.org/maven2/com/amazon/deequ/deequ/2.0.7-spark-3.5/deequ-2.0.7-spark-3.5.jar -Lo /opt/spark/jars/deequ-2.0.7-spark-3.5.jar
     ```
