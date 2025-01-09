@@ -8,12 +8,13 @@
 - [Pipeline Architecture](#pipeline-architecture)
   - [Key Steps in the Pipeline](#key-steps-in-the-pipeline)
 - [Example Dashboard](#example-dashboard)
+- [Design Specification](#design-specification)
+- [Data Sources](#data-sources)
+- [Challenges Addressed](#challenges-addressed)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Running the Pipeline](#running-the-pipeline)
-- [Data Sources](#data-sources)
-- [Challenges Addressed](#challenges-addressed)
 - [Future Enhancements](#future-enhancements-and-next-steps)
 - [Contribution](#contribution)
 - [License](#license)
@@ -45,6 +46,23 @@ The **Airline Flights Pipeline** project is an end-to-end ETL (Extract, Transfor
 
 ## Example Dashboard
 ![Dashboard Preview](images/example_dashboard.png)
+
+## Design Specification
+Ensures proper design and can be validated by stakeholders prior to implementation. For more details, refer to the [Design Specification](docs/Design_Specification.md).
+![Design Spec Preview 1](images/design_spec1.png)
+![Design Spec Preview 2](images/design_spec2.png)
+
+## Data Sources
+This project uses publicly available [US Domestic Flight Data](https://www.kaggle.com/datasets/usdot/flight-delays) from the US Department of Transportation (DOT). Data includes:
+- Flight schedules
+- Delays and cancellations
+- Airport and airline metadata
+
+## Challenges Addressed
+- Handling large-scale data efficiently using distributed processing (Spark).
+- Maintaining data integrity with quality checks.
+- Optimizing storage and query performance with Iceberg.
+- Building user-friendly dashboards for non-technical stakeholders.
 
 ## Getting Started
 ### Prerequisites
@@ -88,18 +106,6 @@ Ensure the following tools and libraries are installed:
    ```bash
    python etl_pipeline.py
    ```
-
-## Data Sources
-This project uses publicly available [US Domestic Flight Data](https://www.kaggle.com/datasets/usdot/flight-delays) from the US Department of Transportation (DOT). Data includes:
-- Flight schedules
-- Delays and cancellations
-- Airport and airline metadata
-
-## Challenges Addressed
-- Handling large-scale data efficiently using distributed processing (Spark).
-- Maintaining data integrity with quality checks.
-- Optimizing storage and query performance with Iceberg.
-- Building user-friendly dashboards for non-technical stakeholders.
 
 ## Future Enhancements and Next Steps
 ##### Data Integration
