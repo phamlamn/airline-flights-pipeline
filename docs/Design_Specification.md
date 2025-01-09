@@ -1,6 +1,5 @@
 # Design Specification - US Flight Delays Pipeline
 
-<aside>
 ## **Airlines would like to analyze delay patterns.**
 
 ### The goal of this pipeline is to answer the following questions:
@@ -11,7 +10,6 @@
 4. Which airlines seem to be most and least reliable, in terms of on-time departure?
 5. How many flights were cancelled in 2015?
 6. What % of cancellations were due to weather? What % were due to the Airline/Carrier?
-</aside>
 
 # Business Metrics
 
