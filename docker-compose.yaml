@@ -2,16 +2,17 @@ version: "3"
 
 services:
   spark-iceberg:
-    image: tabulario/spark-iceberg
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
     container_name: spark-iceberg-flights
-    build: spark/
     networks:
       iceberg_net:
     depends_on:
       - rest
       - minio
     volumes:
-      - ./notebooks:/home/iceberg/notebooks/notebooks
+      - ./notebooks:/home/iceberg/notebooks
       - ./data:/home/iceberg/data
       - ./src:/home/iceberg/src
     env_file:
