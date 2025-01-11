@@ -86,26 +86,11 @@ Ensure the following tools and libraries are installed:
     docker-compose up -d
     ```
 
-4. Enter the Spark-Iceberg container:
-    ```sh
-    docker exec -it spark-iceberg-flights bash
-    ```
-
-5. Install Python dependencies in Spark-Iceberg container:
-    ```sh
-    pip install -r requirements.txt
-    ```
-
-5. Download the Deequ jar in Spark-Iceberg container:
-    ```sh
-    curl https://repo1.maven.org/maven2/com/amazon/deequ/deequ/2.0.7-spark-3.5/deequ-2.0.7-spark-3.5.jar -Lo /opt/spark/jars/deequ-2.0.7-spark-3.5.jar
-    ```
-
 ### Running the Pipeline
-1. Start the ETL pipeline: [etl_pipeline.py](src/jobs/etl_pipeline.py)
-   ```bash
-   python etl_pipeline.py
-   ```
+1. Run the ETL pipeline from within the Spark-Iceberg container:
+    ```sh
+    docker exec -it spark-iceberg-flights python /home/iceberg/src/jobs/etl_pipeline.py
+    ```
 
 ## Future Enhancements and Next Steps
 ##### Data Integration
