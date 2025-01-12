@@ -10,14 +10,15 @@ RUN apt-get update && \
         openjdk-11-jdk \
         build-essential \
         software-properties-common \
-        ssh && \
+        ssh \
+        rsync && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Optional env variables
 ENV SPARK_HOME=${SPARK_HOME:-"/opt/spark"}
 ENV PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:$PYTHONPATH
-ENV SPARK_VERSION=3.5.4
+ENV SPARK_VERSION=3.5.2
 ENV SPARK_MAJOR_VERSION=3.5
 ENV ICEBERG_VERSION=1.6.0
 ENV DEEQU_VERSION=2.0.7
@@ -26,7 +27,7 @@ WORKDIR ${SPARK_HOME}
 
 # Download Spark
 RUN mkdir -p ${SPARK_HOME} && \
-    curl https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz && \
+    curl https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -o spark-${SPARK_VERSION}-bin-hadoop3.tgz && \
     tar xvzf spark-${SPARK_VERSION}-bin-hadoop3.tgz --directory /opt/spark --strip-components 1 && \
     rm -rf spark-${SPARK_VERSION}-bin-hadoop3.tgz
 

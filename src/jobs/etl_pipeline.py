@@ -1,6 +1,7 @@
 import os
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType
+import pydeequ
 
 import iceberg_ddl
 from extract import extract_raw_data, generate_dim_dates_df
@@ -10,19 +11,26 @@ from load import create_iceberg_tables, write_audit_publish_iceberg, write_icebe
 
 CATALOG_NAME = os.environ['CATALOG_NAME']
 DATABASE_NAME = os.environ['DATABASE_NAME']
+SPARK_MASTER=os.environ['SPARK_MASTER']
+CATALOG_SPARK=os.environ['CATALOG_SPARK']
+CATALOG_TYPE=os.environ['CATALOG_TYPE']
+CATALOG_REST_ENDPOINT=os.environ['CATALOG_REST_ENDPOINT']
+CATALOG_S3_ENDPOINT=os.environ['CATALOG_S3_ENDPOINT']
+CATALOG_WAREHOUSE=os.environ['CATALOG_WAREHOUSE']
+CATALOG_IO__IMPL=os.environ['CATALOG_IO__IMPL']
 
 
 def init_spark(app_name: str = 'US Flights Pipeline') -> SparkSession:
     # Define the configuration for SparkSession, including the Iceberg catalog
     # which uses MinIO (an S3-compatible object storage) for local storage.
     spark_configs = {
-        'spark.master': 'spark://spark-iceberg:7077',
-        f'spark.sql.catalog.{CATALOG_NAME}': 'org.apache.iceberg.spark.SparkCatalog',
-        f'spark.sql.catalog.{CATALOG_NAME}.type': 'rest',
-        f'spark.sql.catalog.{CATALOG_NAME}.uri': 'http://rest:8181',
-        f'spark.sql.catalog.{CATALOG_NAME}.s3.endpoint': 'http://minio:9000',
-        f'spark.sql.catalog.{CATALOG_NAME}.warehouse': 's3://warehouse',
-        f'spark.sql.catalog.{CATALOG_NAME}.io-impl': 'org.apache.iceberg.aws.s3.S3FileIO',
+        'spark.master': SPARK_MASTER,
+        f'spark.sql.catalog.{CATALOG_NAME}': CATALOG_SPARK,
+        f'spark.sql.catalog.{CATALOG_NAME}.type': CATALOG_TYPE,
+        f'spark.sql.catalog.{CATALOG_NAME}.uri': CATALOG_REST_ENDPOINT,
+        f'spark.sql.catalog.{CATALOG_NAME}.s3.endpoint': CATALOG_S3_ENDPOINT,
+        f'spark.sql.catalog.{CATALOG_NAME}.warehouse': CATALOG_WAREHOUSE,
+        f'spark.sql.catalog.{CATALOG_NAME}.io-impl': CATALOG_IO__IMPL,
         'spark.sql.defaultCatalog': CATALOG_NAME
     }
 

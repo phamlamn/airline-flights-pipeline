@@ -17,10 +17,6 @@ services:
       - ./src:/home/iceberg/src
     env_file:
       - .env
-    environment:
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
     ports:
       - 4040-4045:4040-4045
       - 8888:8888
@@ -45,10 +41,8 @@ services:
   minio:
     image: minio/minio
     container_name: minio-flights
-    environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password
-      - MINIO_DOMAIN=minio
+    env_file:
+      - .env
     networks:
       iceberg_net:
         aliases:
@@ -65,10 +59,8 @@ services:
     container_name: mc-flights
     networks:
       iceberg_net:
-    environment:
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
+    env_file:
+      - .env
     entrypoint: >
       /bin/sh -c "
       until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
