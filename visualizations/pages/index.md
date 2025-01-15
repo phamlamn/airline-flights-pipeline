@@ -1,16 +1,17 @@
 ---
 title: 2015 US Domestic Flights Analysis
+queries:
+  - airlines.sql
 ---
 
 
 
-```sql airlines
-SELECT
-    airline
-FROM agg_fact_flights.data
-WHERE agg_level = 'airline'
-    AND time_agg_level = 'year'
-```
+
+<Details title='Show SQL'>
+
+    Click on the menu icon `...` in the top right corner of the page and select `Show Queries`
+
+</Details>
 
 
 

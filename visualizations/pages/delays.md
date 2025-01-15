@@ -1,15 +1,9 @@
 ---
 title: Delay Analysis
+queries:
+  - airlines.sql
 ---
 
-
-```sql airlines
-SELECT
-    airline
-FROM agg_fact_flights.data
-WHERE agg_level = 'airline'
-    AND time_agg_level = 'year'
-```
 
 
 <!-- Delay Stats by Month -->

@@ -1,25 +1,32 @@
 ---
 title: Cancellation Analysis
+queries:
+  - airlines.sql
 ---
 
-<!-- TODO allow interactivity based on select dimension (eg. airlines) -->
 
 <!-- Cancellation Stats by Month -->
 ```sql cancellation_statistics
 SELECT 
     year, 
     month,
-    cancelled_rate,
-    percent_cancellations_A,
-    percent_cancellations_B,
-    percent_cancellations_C,
-    percent_cancellations_D
+    AVG(cancelled_rate) as cancelled_rate,
+    AVG(percent_cancellations_A),
+    AVG(percent_cancellations_B),
+    AVG(percent_cancellations_C),
+    AVG(percent_cancellations_D)
 FROM 
     agg_fact_flights.data
 WHERE 
     time_agg_level = 'year_month'
-    AND agg_level = 'all'
+    AND agg_level = 'airline'
+    AND airline like ('${inputs.airline_dropdown3.value}')
+GROUP BY year, month
 ```
+<Dropdown data={airlines} name=airline_dropdown3 value=airline defaultValue='%' title="Select an Airline">
+    <DropdownOption value='%' valueLabel='All'/>
+</Dropdown>
+
 <LineChart
     data={cancellation_statistics}
     x=month
@@ -38,15 +45,17 @@ WITH cancel_rates AS (
     SELECT 
         year, 
         month,
-        cancellations_A as airline_carrier,
-        cancellations_B as weather,
-        cancellations_C as national_air_system,
-        cancellations_D as security
+        SUM(cancellations_A) as airline_carrier,
+        SUM(cancellations_B) as weather,
+        SUM(cancellations_C) as national_air_system,
+        SUM(cancellations_D) as security
     FROM 
         agg_fact_flights.data
     WHERE 
         time_agg_level = 'year_month'
-        AND agg_level = 'all'
+        AND agg_level = 'airline'
+        AND airline like ('${inputs.airline_dropdown3.value}')
+    GROUP BY year, month
 )
 
 unpivot cancel_rates
@@ -71,31 +80,38 @@ into
 
 <!-- How many flights were cancelled in 2015? What % of cancellations were due to weather? What % were due to the Airline/Carrier? -->
 ```sql cancellation_data
-SELECT 'Security' as name, cancellations_D as count
-FROM agg_fact_flights.data
-WHERE agg_level = 'all'
-    AND time_agg_level = 'year'
+WITH cancellations_breakdown AS (
+    SELECT
+        year,
+        SUM(cancellations_A) as airline_carrier,
+        SUM(cancellations_B) as weather,
+        SUM(cancellations_C) as national_air_system,
+        SUM(cancellations_D) as security
+    FROM agg_fact_flights.data
+    WHERE
+        time_agg_level = 'year'
+        AND agg_level = 'airline'
+        AND airline like ('${inputs.airline_dropdown3.value}')
+    GROUP BY year
+)
+
+SELECT 'Security' as name, security as count
+FROM cancellations_breakdown
 
 UNION ALL
 
-SELECT 'National Air System' as name, cancellations_C as count
-FROM agg_fact_flights.data
-WHERE agg_level = 'all'
-    AND time_agg_level = 'year'
+SELECT 'National Air System' as name, national_air_system as count
+FROM cancellations_breakdown
 
 UNION ALL
 
-SELECT 'Airline/Carrier' as name, cancellations_A as count
-FROM agg_fact_flights.data
-WHERE agg_level = 'all'
-    AND time_agg_level = 'year'
+SELECT 'Airline/Carrier' as name, airline_carrier as count
+FROM cancellations_breakdown
 
 UNION ALL
 
-SELECT 'Weather' as name, cancellations_B as count
-FROM agg_fact_flights.data
-WHERE agg_level = 'all'
-    AND time_agg_level = 'year'
+SELECT 'Weather' as name, weather as count
+FROM cancellations_breakdown
 ```
 
 ```sql pie_data
